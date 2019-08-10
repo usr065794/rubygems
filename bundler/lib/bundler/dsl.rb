@@ -10,6 +10,7 @@ module Bundler
     def self.evaluate(gemfile, lockfile, unlock)
       builder = new
       builder.eval_gemfile(gemfile)
+      builder.check_primary_source_safety
       builder.to_definition(lockfile, unlock)
     end
 
@@ -24,6 +25,11 @@ module Bundler
     def initialize
       @source               = nil
       @sources              = SourceList.new
+
+      @global_rubygems_sources = []
+      @global_path_sources = []
+      @global_git_sources = []
+
       @git_sources          = {}
       @dependencies         = []
       @groups               = []
@@ -164,7 +170,7 @@ module Bundler
       elsif block_given?
         with_source(@sources.add_rubygems_source("remotes" => source), &blk)
       else
-        check_primary_source_safety(@sources)
+        @global_rubygems_sources << source
         @sources.global_rubygems_source = source
       end
     end
@@ -183,6 +189,13 @@ module Bundler
     end
 
     def path(path, options = {}, &blk)
+      source_options = normalize_hash(options).merge(
+        "path" => Pathname.new(path),
+        "root_path" => gemfile_root,
+        "gemspec" => gemspecs.find {|g| g.name == options["name"] }
+      )
+      source = @sources.add_path_source(source_options)
+
       unless block_given?
         msg = "You can no longer specify a path source by itself. Instead, \n" \
               "either use the :path option on a gem, or specify the gems that \n" \
@@ -193,18 +206,16 @@ module Bundler
               "    end\n\n"
 
         SharedHelpers.major_deprecation(2, msg.strip)
+
+        @global_path_sources << source
       end
 
-      source_options = normalize_hash(options).merge(
-        "path" => Pathname.new(path),
-        "root_path" => gemfile_root,
-        "gemspec" => gemspecs.find {|g| g.name == options["name"] }
-      )
-      source = @sources.add_path_source(source_options)
       with_source(source, &blk)
     end
 
     def git(uri, options = {}, &blk)
+      source = @sources.add_git_source(normalize_hash(options).merge("uri" => uri))
+
       unless block_given?
         msg = "You can no longer specify a git source by itself. Instead, \n" \
               "either use the :git option on a gem, or specify the gems that \n" \
@@ -214,9 +225,11 @@ module Bundler
               "    gem 'rails'\n" \
               "  end"
         raise DeprecatedError, msg
+
+        @global_git_sources << source
       end
 
-      with_source(@sources.add_git_source(normalize_hash(options).merge("uri" => uri)), &blk)
+      with_source(source, &blk)
     end
 
     def github(repo, options = {})
@@ -439,24 +452,20 @@ repo_name ||= user_name
       end
     end
 
-    def check_primary_source_safety(source_list)
-      return if source_list.rubygems_primary_remotes.empty? && source_list.global_rubygems_source.nil?
-
-      if Bundler.feature_flag.disable_multisource?
-        msg = "This Gemfile contains multiple primary sources. " \
-          "Each source after the first must include a block to indicate which gems " \
-          "should come from that source. To downgrade this error to a warning, run " \
-          "`bundle config unset disable_multisource`"
-        raise GemfileEvalError, msg
-      else
-        Bundler::SharedHelpers.major_deprecation 2, "Your Gemfile contains multiple primary sources. " \
-          "Using `source` more than once without a block is a security risk, and " \
-          "may result in installing unexpected gems. To resolve this warning, use " \
-          "a block to indicate which gems should come from the secondary source. " \
-          "To upgrade this warning to an error, run `bundle config set " \
-          "disable_multisource true`."
+    def check_primary_source_safety
+      if @global_rubygems_sources.size <= 1 && @global_path_sources.size == 0 && @global_git_sources.size == 0
+        Bundler.settings.temporary(:disable_multisource => true)
+        return
       end
+
+      Bundler::SharedHelpers.major_deprecation 2, "Your Gemfile contains multiple primary sources. " \
+        "Using `source` more than once without a block is a security risk, and " \
+        "may result in installing unexpected gems. To resolve this warning, use " \
+        "a block to indicate which gems should come from the secondary source. " \
+        "To upgrade this warning to an error, run `bundle config set " \
+        "disable_multisource true`."
     end
+    public :check_primary_source_safety
 
     def warn_deprecated_git_source(name, replacement, additional_message = nil)
       additional_message &&= " #{additional_message}"
