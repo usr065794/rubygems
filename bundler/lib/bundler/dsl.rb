@@ -461,9 +461,7 @@ repo_name ||= user_name
       Bundler::SharedHelpers.major_deprecation 2, "Your Gemfile contains multiple primary sources. " \
         "Using `source` more than once without a block is a security risk, and " \
         "may result in installing unexpected gems. To resolve this warning, use " \
-        "a block to indicate which gems should come from the secondary source. " \
-        "To upgrade this warning to an error, run `bundle config set " \
-        "disable_multisource true`."
+        "a block to indicate which gems should come from the secondary source."
     end
     public :check_primary_source_safety
 

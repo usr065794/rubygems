@@ -362,17 +362,14 @@ RSpec.describe "major deprecations" do
         "Your Gemfile contains multiple primary sources. " \
         "Using `source` more than once without a block is a security risk, and " \
         "may result in installing unexpected gems. To resolve this warning, use " \
-        "a block to indicate which gems should come from the secondary source. " \
-        "To upgrade this warning to an error, run `bundle config set " \
-        "disable_multisource true`."
+        "a block to indicate which gems should come from the secondary source."
       )
     end
 
     it "fails with a helpful error", :bundler => "3" do
       expect(err).to include(
         "This Gemfile contains multiple primary sources. " \
-        "Each source after the first must include a block to indicate which gems should come from that source. " \
-        "To downgrade this error to a warning, run `bundle config unset disable_multisource`."
+        "Each source after the first must include a block to indicate which gems should come from that source."
       )
     end
   end
