@@ -28,7 +28,6 @@ module Bundler
 
       @global_rubygems_sources = []
       @global_path_sources = []
-      @global_git_sources = []
 
       @git_sources          = {}
       @dependencies         = []
@@ -214,8 +213,6 @@ module Bundler
     end
 
     def git(uri, options = {}, &blk)
-      source = @sources.add_git_source(normalize_hash(options).merge("uri" => uri))
-
       unless block_given?
         msg = "You can no longer specify a git source by itself. Instead, \n" \
               "either use the :git option on a gem, or specify the gems that \n" \
@@ -225,11 +222,9 @@ module Bundler
               "    gem 'rails'\n" \
               "  end"
         raise DeprecatedError, msg
-
-        @global_git_sources << source
       end
 
-      with_source(source, &blk)
+      with_source(@sources.add_git_source(normalize_hash(options).merge("uri" => uri)), &blk)
     end
 
     def github(repo, options = {})
@@ -453,7 +448,7 @@ repo_name ||= user_name
     end
 
     def check_primary_source_safety
-      if @global_rubygems_sources.size <= 1 && @global_path_sources.size == 0 && @global_git_sources.size == 0
+      if @global_rubygems_sources.size <= 1 && @global_path_sources.size == 0
         Bundler.settings.temporary(:disable_multisource => true)
         return
       end
