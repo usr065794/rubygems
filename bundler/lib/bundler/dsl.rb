@@ -453,11 +453,19 @@ repo_name ||= user_name
         return
       end
 
-      Bundler::SharedHelpers.major_deprecation 2, "Your Gemfile contains multiple primary sources. " \
-        "Using `source` more than once without a block is a security risk, and " \
-        "may result in installing unexpected gems. To resolve this warning, use " \
-        "a block to indicate which gems should come from the secondary source."
+      if Bundler.feature_flag.bundler_3_mode?
+        msg = "This Gemfile contains multiple primary sources. " \
+          "Each source after the first must include a block to indicate which gems " \
+          "should come from that source"
+        raise GemfileEvalError, msg
+      else
+        Bundler::SharedHelpers.major_deprecation 2, "Your Gemfile contains multiple primary sources. " \
+          "Using `source` more than once without a block is a security risk, and " \
+          "may result in installing unexpected gems. To resolve this warning, use " \
+          "a block to indicate which gems should come from the secondary source."
+      end
     end
+
     public :check_primary_source_safety
 
     def warn_deprecated_git_source(name, replacement, additional_message = nil)
