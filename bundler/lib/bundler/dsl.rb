@@ -10,7 +10,6 @@ module Bundler
     def self.evaluate(gemfile, lockfile, unlock)
       builder = new
       builder.eval_gemfile(gemfile)
-      builder.check_primary_source_safety
       builder.to_definition(lockfile, unlock)
     end
 
@@ -50,6 +49,7 @@ module Bundler
       @gemfiles << expanded_gemfile_path
       contents ||= Bundler.read_file(@gemfile.to_s)
       instance_eval(contents.dup.tap{|x| x.untaint if RUBY_VERSION < "2.7" }, gemfile.to_s, 1)
+      check_primary_source_safety
     rescue Exception => e # rubocop:disable Lint/RescueException
       message = "There was an error " \
         "#{e.is_a?(GemfileEvalError) ? "evaluating" : "parsing"} " \
@@ -465,8 +465,6 @@ repo_name ||= user_name
           "a block to indicate which gems should come from the secondary source."
       end
     end
-
-    public :check_primary_source_safety
 
     def warn_deprecated_git_source(name, replacement, additional_message = nil)
       additional_message &&= " #{additional_message}"
