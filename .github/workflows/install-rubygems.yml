@@ -26,11 +26,14 @@ jobs:
         run: ruby -Ilib -S rake install 2> errors.txt
       - name: Check rubygems install produced no warnings
         run: test ! -s errors.txt || (cat errors.txt && exit 1)
-      - name: Simulate no openssl
-        run: ruby util/remove_openssl.rb
+      - name: Run installed rubygems
+        run: gem list bundler
+        env:
+          RUBYOPT: -Itest/rubygems/fake_certlib
         if: matrix.openssl == false
       - name: Run installed rubygems
         run: gem list bundler
+        if: matrix.openssl == true
       - name: Run bundler installed as a default gem
         run: bundle --version
       - name: Check bundler man pages were installed and are properly picked up
