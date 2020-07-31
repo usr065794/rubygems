@@ -27,7 +27,7 @@ class TestGemCommandsCheckCommand < Gem::TestCase
   end
 
   def test_handle_options
-    @cmd.handle_options %w[--no-alien --no-gems --doctor --dry-run]
+    @cmd.handle_options %w[--no-alien --no-gems --doctor --dryrun]
 
     assert @cmd.options[:doctor]
     refute @cmd.options[:alien]

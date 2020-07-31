@@ -23,7 +23,7 @@ class Gem::Commands::CheckCommand < Gem::Command
       options[:doctor] = value
     end
 
-    add_option('--[no-]dry-run',
+    add_option('--[no-]dryrun',
                'Do not remove files, only report what',
                'would be removed') do |value, options|
       options[:dry_run] = value
